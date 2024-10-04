@@ -11,7 +11,7 @@ export default defineConfig({
     ],
     web_accessible_resources: [
       {
-        resources: ["ai-icon.png"],
+        resources: ["ai-icon.png", "insert-icon.svg", "regenerate-icon.svg","generate-icon.svg"],
         matches: ["https://www.linkedin.com/*"]
       }
     ]

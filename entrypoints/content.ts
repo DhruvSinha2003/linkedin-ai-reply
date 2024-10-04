@@ -7,172 +7,229 @@ export default defineContentScript({
     console.log('LinkedIn AI Reply content script is running');
 
     const addAIButton = () => {
-      console.log('Attempting to add AI button');
       const commentForms = document.querySelectorAll('.comments-comment-box__form');
-      console.log('Found comment forms:', commentForms.length);
 
-      commentForms.forEach((form, index) => {
-        console.log(`Examining comment form ${index}:`, form);
-
+      commentForms.forEach((form) => {
         const buttonContainer = form.querySelector('.display-flex.justify-space-between .display-flex');
-        if (!buttonContainer) {
-          console.log(`Could not find button container for form ${index}`);
-          return;
-        }
+        if (!buttonContainer || buttonContainer.querySelector('.ai-button')) return;
 
-        if (buttonContainer.querySelector('.ai-button')) {
-          console.log(`AI button already exists for comment form ${index}`);
-          return;
-        }
-
-        console.log(`Found button container for comment form ${index}:`, buttonContainer);
-
-        // Creating the AI button
+        // Create the AI button
         const aiButton = document.createElement('button');
         aiButton.className = 'ai-button artdeco-button artdeco-button--circle artdeco-button--muted artdeco-button--2 artdeco-button--tertiary';
         aiButton.setAttribute('aria-label', 'AI Assist');
         aiButton.style.cssText = `
+          margin-left: 8px;
+          width: 40px;
+          height: 40px;
           display: flex;
           justify-content: center;
           align-items: center;
-          width: 40px;
-          height: 40px;
-          padding: 0;
         `;
 
-        // Adding the AI icon
         const aiIcon = document.createElement('img');
         aiIcon.src = chrome.runtime.getURL('ai-icon.png');
-        aiIcon.alt = 'AI Assist';
         aiIcon.style.cssText = `
           width: 40px;
           height: 40px;
         `;
-
         aiButton.appendChild(aiIcon);
 
+        // Handle button click event to show popup
         aiButton.addEventListener('click', (e) => {
           e.preventDefault();
-          console.log('AI button was clicked');
-          showAIPopup(form);
+          showAIPopup(buttonContainer as HTMLElement, form as HTMLFormElement);
         });
 
-        // Insert the AI button to the left of the emoji button
-        const emojiButton = buttonContainer.querySelector('.emoji-hoverable-trigger');
-        if (emojiButton) {
-          buttonContainer.insertBefore(aiButton, emojiButton);
-        } else {
-          buttonContainer.prepend(aiButton);
-        }
-        console.log(`Added AI button to comment form ${index}`);
+        buttonContainer.prepend(aiButton);
       });
     };
 
-    const showAIPopup = (form: Element) => {
-      const popup = document.createElement('div');
-      popup.className = 'ai-popup';
-      popup.style.cssText = `
+    const showAIPopup = (buttonContainer: HTMLElement, form: HTMLFormElement) => {
+      // Remove any existing popup
+      const existingPopup = buttonContainer.querySelector('.ai-popup');
+      if (existingPopup) existingPopup.remove();
+
+      // Create the popup container
+      const popupContainer = document.createElement('div');
+      popupContainer.className = 'ai-popup';
+      popupContainer.style.cssText = `
         position: absolute;
-        background: white;
-        border: 1px solid #ccc;
-        padding: 10px;
-        z-index: 1000;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      `;
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = 'Your prompt';
-      input.style.cssText = `
+        top: 0;
+        left: 0;
         width: 100%;
-        padding: 5px;
-        margin-bottom: 10px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        padding: 12px;
+        z-index: 10000;
       `;
 
-      const generateButton = document.createElement('button');
-      generateButton.textContent = 'Generate';
-      generateButton.style.cssText = `
-        padding: 5px 10px;
-        background: #0a66c2;
-        color: white;
-        border: none;
-        cursor: pointer;
+      // Create chat container for prompt and response
+      const chatContainer = document.createElement('div');
+      chatContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-bottom: 16px;
       `;
 
-      popup.appendChild(input);
-      popup.appendChild(generateButton);
+      // Append chat container to popup
+      popupContainer.appendChild(chatContainer);
 
-      generateButton.addEventListener('click', () => {
-        const message = "Thank you for the opportunity! If you have any more questions or if there's anything else I can help you with, feel free to ask.";
-        showGeneratedMessage(form, message);
-        popup.remove();
-      });
+      // Create the prompt bubble (chat-style)
+      const createChatBubble = (text: string, isUser: boolean) => {
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `
+          align-self: ${isUser ? 'flex-end' : 'flex-start'};
+          background-color: ${isUser ? '#f1f1f1' : '#e1f5fe'};
+          padding: 10px 14px;
+          border-radius: 18px;
+          margin-bottom: 8px;
+          max-width: 80%;
+          font-size: 14px;
+          word-wrap: break-word;
+        `;
+        bubble.innerText = text;
+        return bubble;
+      };
 
-      document.body.appendChild(popup);
-
-      // Position the popup near the AI button
-      const rect = form.getBoundingClientRect();
-      popup.style.left = `${rect.left}px`;
-      popup.style.top = `${rect.bottom + window.scrollY}px`;
-    };
-
-    const showGeneratedMessage = (form: Element, message: string) => {
-      const messageContainer = document.createElement('div');
-      messageContainer.className = 'ai-generated-message';
-      messageContainer.style.cssText = `
-        background: #f3f6f8;
+      // Add textarea for prompt input
+      const promptInput = document.createElement('textarea');
+      promptInput.placeholder = 'Your prompt';
+      promptInput.style.cssText = `
+        width: 100%;
+        padding: 8px;
         border: 1px solid #e0e0e0;
-        padding: 10px;
-        margin: 10px 0;
-        border-radius: 5px;
+        border-radius: 4px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        resize: none;
+        height: 60px;
       `;
 
-      const messageText = document.createElement('p');
-      messageText.textContent = message;
+      // Append the prompt input to popup
+      popupContainer.appendChild(promptInput);
 
-      const insertButton = document.createElement('button');
-      insertButton.textContent = 'Insert';
-      insertButton.style.cssText = `
-        padding: 5px 10px;
-        background: #0a66c2;
+      // Create buttons container
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.style.cssText = `
+        display: flex;
+        justify-content: flex-end;
+      `;
+
+      // Generate button (blue)
+      const generateButton = document.createElement('button');
+      generateButton.className = 'generate-button artdeco-button artdeco-button--primary';
+      generateButton.innerHTML = `
+        <img src="${chrome.runtime.getURL('generate-icon.svg')}" alt="Generate" style="margin-right: 4px; width: 12px; height: 12px;"/> Generate
+      `;
+      generateButton.style.cssText = `
+        background-color: #0a66c2;
         color: white;
-        border: none;
+        padding: 6px 16px;
+        font-size: 16px;
+        font-weight: 600;
         cursor: pointer;
-        margin-top: 10px;
+        border: none;
+        border-radius: 16px;
+        width: 20%;
+        margin-left: 8px;
       `;
 
-      insertButton.addEventListener('click', () => {
-        const editor = form.querySelector('.ql-editor');
-        if (editor) {
-          editor.textContent = message;
-          messageContainer.remove();
+      // Append generate button to the container
+      buttonsContainer.appendChild(generateButton);
+      popupContainer.appendChild(buttonsContainer);
+
+      // Append the popup to the button container
+      buttonContainer.appendChild(popupContainer);
+
+      // Handle generating the AI response
+      generateButton.addEventListener('click', () => {
+        const userPrompt = promptInput.value.trim();
+        if (!userPrompt) return;
+
+        // Add the user prompt to the chat container
+        chatContainer.appendChild(createChatBubble(userPrompt, true));
+
+        // Simulated AI response
+        const aiResponse = `Thank you for the opportunity!`;
+
+        // Add AI response to the chat container
+        chatContainer.appendChild(createChatBubble(aiResponse, false));
+
+        // Scroll chat to the bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Clear the prompt input and change "Generate" to "Regenerate"
+        promptInput.value = '';
+        generateButton.innerHTML = `
+          <img src="${chrome.runtime.getURL('regenerate-icon.svg')}" alt="Regenerate" style="margin-right: 4px; width: 12px; height: 12px;"/> Regenerate
+        `;
+
+        // Create and append the "Insert" button after generating the response
+        if (!buttonsContainer.querySelector('.insert-button')) {
+          const insertButton = document.createElement('button');
+          insertButton.className = 'insert-button artdeco-button artdeco-button--muted';
+          insertButton.innerHTML = `
+            <img src="${chrome.runtime.getURL('insert-icon.svg')}" alt="Insert" style="margin-right: 4px; width: 12px; height: 12px;"/> Insert
+          `;
+          insertButton.style.cssText = `
+            background-color: #f3f6f8;
+            color: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            width: 20%;
+            margin-left: 8px;
+          `;
+
+          // Handle inserting AI response into the comment input
+          insertButton.addEventListener('click', () => {
+            const editor = form.querySelector('.ql-editor') as HTMLElement;
+            if (editor) {
+              editor.textContent = aiResponse; // Insert AI response into the input box
+              popupContainer.remove(); // Close the popup after inserting
+            }
+          });
+
+          // Append the Insert button to the buttons container
+          buttonsContainer.appendChild(insertButton);
         }
       });
 
-      messageContainer.appendChild(messageText);
-      messageContainer.appendChild(insertButton);
+      // Prevent closing when clicking inside the popup
+      popupContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
 
-      form.appendChild(messageContainer);
+      // Close popup when clicking outside
+      const closePopup = (e: MouseEvent) => {
+        if (!popupContainer.contains(e.target as Node)) {
+          popupContainer.remove();
+          document.removeEventListener('click', closePopup);
+        }
+      };
+
+      // Add a slight delay before adding the click event listener to prevent immediate closure
+      setTimeout(() => {
+        document.addEventListener('click', closePopup);
+      }, 100);
     };
 
-    // Initial call to add buttons
+    // Initial call to add AI buttons
     addAIButton();
 
-    // Use a MutationObserver to watch for new comment forms
+    // Use MutationObserver to watch for DOM changes
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          console.log('DOM changed, attempting to add AI button');
-          addAIButton();
-        }
-      });
+      mutations.forEach(() => addAIButton());
     });
 
     observer.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true,
     });
-
-    console.log('MutationObserver set up');
   },
 });
