@@ -2,6 +2,16 @@ import { defineConfig } from 'wxt'
 
 export default defineConfig({
   manifest: {
+    name:"Linkedin AI Reply",
+    description:"Created by Dhruv Sinha for ChatGPT Writer Take-home Coding Assignment ",
+    version:"1.0.0",
+    icons: {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "96": "icon96.png",
+      "128": "icon128.png"
+    },
     permissions: ["activeTab"],
     content_scripts: [
       {
