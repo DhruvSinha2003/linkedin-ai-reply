@@ -8,25 +8,24 @@ function App() {
 
   return (
     <>
-      <div>
-        <a href="https://wxt.dev" target="_blank">
-          <img src={wxtLogo} className="logo" alt="WXT logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>WXT + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
+      <h1>Dhruv Sinha</h1>
       <p className="read-the-docs">
-        Click on the WXT and React logos to learn more
+        <a
+          href="https://www.linkedin.com/in/dhruvsinha2003/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          https://www.linkedin.com/in/dhruvsinha2003/
+        </a>
+      </p>
+      <p className="read-the-docs">
+        <a
+          href="https://github.com/DhruvSinha2003"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          https://github.com/DhruvSinha2003
+        </a>
       </p>
     </>
   );

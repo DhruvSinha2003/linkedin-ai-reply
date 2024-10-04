@@ -18,7 +18,6 @@ export default defineContentScript({
         aiButton.className = 'ai-button artdeco-button artdeco-button--circle artdeco-button--muted artdeco-button--2 artdeco-button--tertiary';
         aiButton.setAttribute('aria-label', 'AI Assist');
         aiButton.style.cssText = `
-          margin-left: 8px;
           width: 40px;
           height: 40px;
           display: flex;
@@ -29,39 +28,49 @@ export default defineContentScript({
         const aiIcon = document.createElement('img');
         aiIcon.src = chrome.runtime.getURL('ai-icon.png');
         aiIcon.style.cssText = `
-          width: 40px;
-          height: 40px;
+          width: 32px;
+          height: 32px;
         `;
         aiButton.appendChild(aiIcon);
 
         // Handle button click event to show popup
         aiButton.addEventListener('click', (e) => {
           e.preventDefault();
-          showAIPopup(buttonContainer as HTMLElement, form as HTMLFormElement);
+          e.stopPropagation();
+          showAIPopup(form as HTMLFormElement);
         });
 
-        buttonContainer.prepend(aiButton);
+        // Insert the AI button at the beginning of the container
+        buttonContainer.insertBefore(aiButton, buttonContainer.firstChild);
       });
     };
 
-    const showAIPopup = (buttonContainer: HTMLElement, form: HTMLFormElement) => {
-      // Remove any existing popup
-      const existingPopup = buttonContainer.querySelector('.ai-popup');
-      if (existingPopup) existingPopup.remove();
+    const showAIPopup = (form: HTMLFormElement) => {
+      // Create the overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      `;
 
       // Create the popup container
       const popupContainer = document.createElement('div');
       popupContainer.className = 'ai-popup';
       popupContainer.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        padding: 12px;
-        z-index: 10000;
+        padding: 20px;
+        width: 80%;
+        max-width: 600px;
       `;
 
       // Create chat container for prompt and response
@@ -69,7 +78,7 @@ export default defineContentScript({
       chatContainer.style.cssText = `
         display: flex;
         flex-direction: column;
-        max-height: 200px;
+        max-height: 300px;
         overflow-y: auto;
         margin-bottom: 16px;
       `;
@@ -127,13 +136,12 @@ export default defineContentScript({
       generateButton.style.cssText = `
         background-color: #0a66c2;
         color: white;
-        padding: 6px 16px;
-        font-size: 16px;
+        padding: 4px 8px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         border: none;
-        border-radius: 16px;
-        width: 20%;
+        border-radius: 4px;
         margin-left: 8px;
       `;
 
@@ -141,8 +149,11 @@ export default defineContentScript({
       buttonsContainer.appendChild(generateButton);
       popupContainer.appendChild(buttonsContainer);
 
-      // Append the popup to the button container
-      buttonContainer.appendChild(popupContainer);
+      // Append the popup to the overlay
+      overlay.appendChild(popupContainer);
+
+      // Append the overlay to the body
+      document.body.appendChild(overlay);
 
       // Handle generating the AI response
       generateButton.addEventListener('click', () => {
@@ -153,7 +164,7 @@ export default defineContentScript({
         chatContainer.appendChild(createChatBubble(userPrompt, true));
 
         // Simulated AI response
-        const aiResponse = `Thank you for the opportunity!`;
+        const aiResponse = `Thank you for the opportunity! If you have any more questions or if there's anything else I can help you with, feel free to ask.`;
 
         // Add AI response to the chat container
         chatContainer.appendChild(createChatBubble(aiResponse, false));
@@ -182,7 +193,6 @@ export default defineContentScript({
             cursor: pointer;
             border: none;
             border-radius: 4px;
-            width: 20%;
             margin-left: 8px;
           `;
 
@@ -191,7 +201,7 @@ export default defineContentScript({
             const editor = form.querySelector('.ql-editor') as HTMLElement;
             if (editor) {
               editor.textContent = aiResponse; // Insert AI response into the input box
-              popupContainer.remove(); // Close the popup after inserting
+              overlay.remove(); // Close the popup after inserting
             }
           });
 
@@ -200,23 +210,12 @@ export default defineContentScript({
         }
       });
 
-      // Prevent closing when clicking inside the popup
-      popupContainer.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
       // Close popup when clicking outside
-      const closePopup = (e: MouseEvent) => {
-        if (!popupContainer.contains(e.target as Node)) {
-          popupContainer.remove();
-          document.removeEventListener('click', closePopup);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.remove();
         }
-      };
-
-      // Add a slight delay before adding the click event listener to prevent immediate closure
-      setTimeout(() => {
-        document.addEventListener('click', closePopup);
-      }, 100);
+      });
     };
 
     // Initial call to add AI buttons
@@ -224,7 +223,18 @@ export default defineContentScript({
 
     // Use MutationObserver to watch for DOM changes
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach(() => addAIButton());
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              if (element.classList.contains('comments-comment-box__form')) {
+                addAIButton();
+              }
+            }
+          });
+        }
+      });
     });
 
     observer.observe(document.body, {
