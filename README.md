@@ -1,3 +1,7 @@
-# WXT + React
+## Linkedin AI Reply Take-home assignment submission by Dhruv Sinha 
 
-This template should help get you started developing with React in WXT.
+### Demo Video: 
+https://github.com/user-attachments/assets/8d7ee785-c278-4ca7-8f64-974eff78d1a6
+
+Contact:
+dhruv.sinha06@gmail.com
