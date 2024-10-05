@@ -5,7 +5,6 @@ export default defineContentScript({
   matches: ['https://www.linkedin.com/*'],
   runAt: 'document_idle',
   main() {
-    console.log('LinkedIn AI Reply content script is running for messaging');
 
     const addAIButton = () => {
       const messageInputContainer = document.querySelector('.msg-form__contenteditable');
@@ -14,11 +13,11 @@ export default defineContentScript({
       const aiButton = document.createElement('button');
       aiButton.className = 'ai-button flex items-center justify-center w-[44px] h-[44px] absolute right-2 bottom-2 z-10';
       aiButton.setAttribute('aria-label', 'AI Assist');
-      aiButton.style.display = 'none'; // Initially hidden
+      aiButton.style.display = 'none';
 
       const aiIcon = document.createElement('img');
       aiIcon.src = chrome.runtime.getURL('ai-icon.png');
-      aiIcon.className = 'w-[32px] h-[32px]'; // Increased icon size
+      aiIcon.className = 'w-[32px] h-[32px]';
 
       aiButton.appendChild(aiIcon);
 
@@ -28,7 +27,6 @@ export default defineContentScript({
         showAIPopup(messageInputContainer as HTMLElement);
       });
 
-      // Set the container to relative positioning if it's not already
       const containerParent = messageInputContainer.closest('.msg-form__msg-content-container--scrollable');
       if (containerParent && window.getComputedStyle(containerParent).position === 'static') {
         (containerParent as HTMLElement).style.position = 'relative';
@@ -36,7 +34,6 @@ export default defineContentScript({
 
       containerParent?.appendChild(aiButton);
 
-      // Show/hide AI button based on input field focus
       messageInputContainer.addEventListener('focus', () => {
         aiButton.style.display = 'flex';
       });
@@ -51,7 +48,6 @@ export default defineContentScript({
     };
 
     const showAIPopup = (form: Element) => {
-      console.log('AI popup triggered ');
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[10000]';
 
@@ -126,13 +122,11 @@ export default defineContentScript({
 
         promptInput.value = '';
         
-        // Replace the generate button with insert and regenerate buttons
-        buttonsContainer.innerHTML = ''; // Clear existing buttons
+        buttonsContainer.innerHTML = ''; 
         
         const insertButton = createButton('Insert', 'insert-icon.svg', 'border-[2px] border-solid !border-[#666D80] text-[#666D80] bg-white hover:bg-gray-100');
         const regenerateButton = createButton('Regenerate', 'regenerate-icon.svg', 'bg-[#3B82F6] text-white ml-2 hover:bg-[#2563eb]');
         
-        // Apply additional styles directly to ensure the border is visible
         insertButton.style.border = '2px solid #666D80';
         insertButton.style.borderRadius = '4px';
 
@@ -145,17 +139,13 @@ export default defineContentScript({
           const messageInput = document.querySelector('.msg-form__contenteditable[contenteditable="true"]') as HTMLElement | null;
           
           if (messageInput) {
-            // Set the innerHTML to a paragraph with the AI response
             messageInput.innerHTML = `<p>${aiResponse}</p>`;
             
-            // Create and dispatch events
             const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
             messageInput.dispatchEvent(inputEvent);
             
-            // Focus on the input to ensure the placeholder disappears
             messageInput.focus();
             
-            // Place the cursor at the end of the text
             const range = document.createRange();
             const sel = window.getSelection();
             range.selectNodeContents(messageInput);
@@ -169,7 +159,6 @@ export default defineContentScript({
 
         regenerateButton.addEventListener('click', () => {
           // Implement regeneration logic here
-          console.log('Regenerate clicked');
         });
       });
 
