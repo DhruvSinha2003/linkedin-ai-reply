@@ -5,36 +5,53 @@ export default defineContentScript({
   matches: ['https://www.linkedin.com/*'],
   runAt: 'document_idle',
   main() {
-    console.log('LinkedIn AI Reply content script is running');
+    console.log('LinkedIn AI Reply content script is running for messaging');
 
     const addAIButton = () => {
-      const commentForms = document.querySelectorAll('.comments-comment-box__form');
+      const messageInputContainer = document.querySelector('.msg-form__contenteditable');
+      if (!messageInputContainer || messageInputContainer.querySelector('.ai-button')) return;
 
-      commentForms.forEach((form) => {
-        const buttonContainer = form.querySelector('.display-flex.justify-space-between .display-flex');
-        if (!buttonContainer || buttonContainer.querySelector('.ai-button')) return;
+      const aiButton = document.createElement('button');
+      aiButton.className = 'ai-button flex items-center justify-center w-[44px] h-[44px] absolute right-2 bottom-2 z-10';
+      aiButton.setAttribute('aria-label', 'AI Assist');
+      aiButton.style.display = 'none'; // Initially hidden
 
-        const aiButton = document.createElement('button');
-        aiButton.className = 'ai-button flex items-center justify-center w-[44px] h-[44px]';
-        aiButton.setAttribute('aria-label', 'AI Assist');
+      const aiIcon = document.createElement('img');
+      aiIcon.src = chrome.runtime.getURL('ai-icon.png');
+      aiIcon.className = 'w-[32px] h-[32px]'; // Increased icon size
 
-        const aiIcon = document.createElement('img');
-        aiIcon.src = chrome.runtime.getURL('ai-icon.png');
-        aiIcon.className = 'w-[36px] h-[36px]';
+      aiButton.appendChild(aiIcon);
 
-        aiButton.appendChild(aiIcon);
+      aiButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showAIPopup(messageInputContainer as HTMLElement);
+      });
 
-        aiButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          showAIPopup(form as HTMLFormElement);
-        });
+      // Set the container to relative positioning if it's not already
+      const containerParent = messageInputContainer.closest('.msg-form__msg-content-container--scrollable');
+      if (containerParent && window.getComputedStyle(containerParent).position === 'static') {
+        (containerParent as HTMLElement).style.position = 'relative';
+      }
 
-        buttonContainer.insertBefore(aiButton, buttonContainer.firstChild);
+      containerParent?.appendChild(aiButton);
+
+      // Show/hide AI button based on input field focus
+      messageInputContainer.addEventListener('focus', () => {
+        aiButton.style.display = 'flex';
+      });
+
+      messageInputContainer.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (!containerParent?.contains(document.activeElement)) {
+            aiButton.style.display = 'none';
+          }
+        }, 100);
       });
     };
 
-    const showAIPopup = (form: HTMLFormElement) => {
+    const showAIPopup = (form: Element) => {
+      console.log('AI popup triggered ');
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[10000]';
 
@@ -47,7 +64,7 @@ export default defineContentScript({
 
       popupContainer.appendChild(chatContainer);
 
-      const createChatBubble = (text: string, isUser: boolean) => {
+      const createChatBubble = (text: string, isUser: boolean): HTMLDivElement => {
         const bubble = document.createElement('div');
         bubble.className = isUser
           ? 'self-end bg-[#DFE1E7] p-3 rounded-2xl mb-2 max-w-[85%] text-sm break-words text-[#666D80]'
@@ -65,7 +82,7 @@ export default defineContentScript({
       const buttonsContainer = document.createElement('div');
       buttonsContainer.className = 'flex justify-end';
 
-      const createButton = (text: string, iconSrc: string, className: string) => {
+      const createButton = (text: string, iconSrc: string, className: string): HTMLButtonElement => {
         const button = document.createElement('button');
         button.className = `flex items-center justify-center ${className} px-3 py-1.5 text-sm font-semibold cursor-pointer rounded`;
         
@@ -123,10 +140,30 @@ export default defineContentScript({
         buttonsContainer.appendChild(regenerateButton);
 
         insertButton.addEventListener('click', () => {
-          const editor = form.querySelector('.ql-editor') as HTMLElement;
-          if (editor) {
-            editor.textContent = aiResponse; 
-            overlay.remove(); 
+          const aiResponse = "Thank you for the opportunity! If you have any more questions or if there's anything else I can help you with, feel free to ask.";
+          
+          const messageInput = document.querySelector('.msg-form__contenteditable[contenteditable="true"]') as HTMLElement | null;
+          
+          if (messageInput) {
+            // Set the innerHTML to a paragraph with the AI response
+            messageInput.innerHTML = `<p>${aiResponse}</p>`;
+            
+            // Create and dispatch events
+            const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true });
+            messageInput.dispatchEvent(inputEvent);
+            
+            // Focus on the input to ensure the placeholder disappears
+            messageInput.focus();
+            
+            // Place the cursor at the end of the text
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(messageInput);
+            range.collapse(false);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+            
+            overlay.remove();
           }
         });
 
@@ -153,7 +190,7 @@ export default defineContentScript({
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as Element;
-              if (element.classList.contains('comments-comment-box__form')) {
+              if (element.classList.contains('msg-form__contenteditable')) {
                 addAIButton();
               }
             }
