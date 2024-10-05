@@ -1,4 +1,5 @@
 import { defineContentScript } from 'wxt/sandbox';
+import '~/assets/main.css';
 
 export default defineContentScript({
   matches: ['https://www.linkedin.com/*'],
@@ -14,17 +15,13 @@ export default defineContentScript({
         if (!buttonContainer || buttonContainer.querySelector('.ai-button')) return;
 
         const aiButton = document.createElement('button');
+        aiButton.className = 'ai-button flex items-center justify-center w-[40px] h-[40px]';
         aiButton.setAttribute('aria-label', 'AI Assist');
-        aiButton.className = 'w-10 h-10 flex justify-center items-center';
-
 
         const aiIcon = document.createElement('img');
         aiIcon.src = chrome.runtime.getURL('ai-icon.png');
-        aiIcon.style.cssText = `
-          padding-top: 4px;
-          width: 32px;
-          height: 32px;
-        `;
+        aiIcon.className = 'w-[36px] h-[36px]';
+
         aiButton.appendChild(aiIcon);
 
         aiButton.addEventListener('click', (e) => {
@@ -33,108 +30,76 @@ export default defineContentScript({
           showAIPopup(form as HTMLFormElement);
         });
 
-        // insert the AI button 
         buttonContainer.insertBefore(aiButton, buttonContainer.firstChild);
       });
     };
 
     const showAIPopup = (form: HTMLFormElement) => {
-      //overlay
       const overlay = document.createElement('div');
-      overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-      `;
+      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[10000]';
 
-      //  popup container
       const popupContainer = document.createElement('div');
-      popupContainer.className = 'ai-popup';
-      popupContainer.style.cssText = `
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        width: 60%;
-        max-width: 600px;
-      `;
+      popupContainer.className = 'ai-popup bg-white rounded-[8px] shadow-md p-[26px] w-[400px] max-w-[90vw] flex flex-col';
+
       const chatContainer = document.createElement('div');
-      chatContainer.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        max-height: 300px;
-        overflow-y: auto;
-        margin-bottom: 16px;
-      `;
+      chatContainer.className = 'flex flex-col max-h-72 overflow-y-auto mb-4 flex-grow';
 
       popupContainer.appendChild(chatContainer);
 
+
       const createChatBubble = (text: string, isUser: boolean) => {
         const bubble = document.createElement('div');
-        bubble.style.cssText = `
-          align-self: ${isUser ? 'flex-end' : 'flex-start'};
-          background-color: ${isUser ? '#f1f1f1' : '#e1f5fe'};
-          padding: 10px 14px;
-          border-radius: 18px;
-          margin-bottom: 8px;
-          max-width: 80%;
-          font-size: 14px;
-          word-wrap: break-word;
-        `;
+        bubble.className = isUser
+          ? 'self-end bg-[#DFE1E7] p-3 rounded-2xl mb-2 max-w-[80%] text-sm break-words text-[#666D80]'
+          : 'self-start bg-[#DBEAFE] p-3 rounded-2xl mb-2 max-w-[80%] text-sm break-words text-[#666D80]';
         bubble.innerText = text;
         return bubble;
       };
 
       const promptInput = document.createElement('textarea');
-      promptInput.placeholder = 'Your prompt';
-      promptInput.style.cssText = `
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #F9FAFB;
-        height: 40px;
-        border-radius: 4px;
-        font-size: 14px;
-        margin-bottom: 12px;
-        resize: none;
-      `;
+        promptInput.placeholder = 'Your prompt';
+        promptInput.style.cssText = `
+          width: 100%;
+          padding: 4px;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          font-size: 12px;
+          margin-bottom: 12px;
+          resize: none;
+          height: 28px;
+          color: #666D80;
+        `;
 
       popupContainer.appendChild(promptInput);
 
       const buttonsContainer = document.createElement('div');
-      buttonsContainer.style.cssText = `
-        display: flex;
-        justify-content: flex-end;
-      `;
+      buttonsContainer.className = 'flex justify-end';
 
-      const generateButton = document.createElement('button');
-      generateButton.innerHTML = `
-        <img src="${chrome.runtime.getURL('generate-icon.svg')}" alt="Generate" style="margin-right: 4px; width: 12px; height: 12px;"/> Generate
-      `;
-      generateButton.style.cssText = `
-        background-color: #0a66c2;
-        color: white;
-        padding: 4px 8px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        border: none;
-        border-radius: 4px;
-        margin-left: 8px;
-      `;
+      const createButton = (text: string, iconSrc: string, className: string, customStyle: string = '') => {
+        const button = document.createElement('button');
+        button.className = `flex items-center justify-center ${className} px-3 py-1.5 text-sm font-semibold cursor-pointer rounded`;
+        button.style.cssText = customStyle;
+        
+        const icon = document.createElement('img');
+        icon.src = chrome.runtime.getURL(iconSrc);
+        icon.className = 'w-4 h-4 mr-2';
+        icon.alt = text;
+
+        const span = document.createElement('span');
+        span.textContent = text;
+
+        button.appendChild(icon);
+        button.appendChild(span);
+
+        return button;
+      };
+
+      const generateButton = createButton('Generate', 'generate-icon.svg', 'bg-[#3B82F6] text-white ml-2');
 
       buttonsContainer.appendChild(generateButton);
       popupContainer.appendChild(buttonsContainer);
 
       overlay.appendChild(popupContainer);
-
-      document.body.appendChild(overlay);
 
       generateButton.addEventListener('click', () => {
         const userPrompt = promptInput.value.trim();
@@ -149,36 +114,27 @@ export default defineContentScript({
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         promptInput.value = '';
-        generateButton.innerHTML = `
-          <img src="${chrome.runtime.getURL('regenerate-icon.svg')}" alt="Regenerate" style="margin-right: 4px; width: 12px; height: 12px;"/> Regenerate
-        `;
+        
+        // Replace the generate button with insert and regenerate buttons
+        buttonsContainer.innerHTML = ''; // Clear existing buttons
+        
+        const insertButton = createButton('Insert', 'insert-icon.svg', 'text-[#666D80]', `
+          background-color: transparent;
+          border: 2px solid #666D80;
+          color: #666D80;
+        `);
+        const regenerateButton = createButton('Regenerate', 'regenerate-icon.svg', 'bg-[#3B82F6] text-white ml-2');
+        
+        buttonsContainer.appendChild(insertButton);
+        buttonsContainer.appendChild(regenerateButton);
 
-        if (!buttonsContainer.querySelector('.insert-button')) {
-          const insertButton = document.createElement('button');
-          insertButton.innerHTML = `
-            <img src="${chrome.runtime.getURL('insert-icon.svg')}" alt="Insert" style="margin-right: 4px; width: 12px; height: 12px;"/> Insert
-          `;
-          insertButton.style.cssText = `
-            background-color: #f3f6f8;
-            color: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            font-size: 12px;
-            cursor: pointer;
-            border: none;
-            border-radius: 4px;
-            margin-left: 8px;
-          `;
-
-          insertButton.addEventListener('click', () => {
-            const editor = form.querySelector('.ql-editor') as HTMLElement;
-            if (editor) {
-              editor.textContent = aiResponse; 
-              overlay.remove(); 
-            }
-          });
-
-          buttonsContainer.appendChild(insertButton);
-        }
+        insertButton.addEventListener('click', () => {
+          const editor = form.querySelector('.ql-editor') as HTMLElement;
+          if (editor) {
+            editor.textContent = aiResponse; 
+            overlay.remove(); 
+          }
+        });
       });
 
       overlay.addEventListener('click', (e) => {
@@ -186,6 +142,8 @@ export default defineContentScript({
           overlay.remove();
         }
       });
+
+      document.body.appendChild(overlay);
     };
 
     addAIButton();

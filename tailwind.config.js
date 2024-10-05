@@ -1,9 +1,5 @@
-module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./content-scripts/**/*.{js,jsx,ts,tsx}",
-    "./popup.html",
-  ],
+export default {
+  content: ["./entrypoints/**/*.{html,ts}", "./components/**/*.ts"],
   theme: {
     extend: {},
   },
