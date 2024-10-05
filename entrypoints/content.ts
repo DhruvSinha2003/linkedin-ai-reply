@@ -56,7 +56,7 @@ export default defineContentScript({
       overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[10000]';
 
       const popupContainer = document.createElement('div');
-      popupContainer.className = 'ai-popup bg-white rounded-[4px] shadow-md p-[20px] w-[480px] max-w-[90vw] flex flex-col';
+      popupContainer.className = 'ai-popup bg-white rounded-[4px] shadow-md p-[20px] w-[360px] max-w-[90vw] flex flex-col';
 
       const chatContainer = document.createElement('div');
       chatContainer.className = 'flex flex-col overflow-y-auto mb-3 flex-grow';
